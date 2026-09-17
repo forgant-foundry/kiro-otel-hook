@@ -1,0 +1,36 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "mlflow-otel-agent-spawn",
+      "trigger": "AgentSpawn",
+      "action": {
+        "type": "command",
+        "command": "python3 -m kiro_mlflow_hook"
+      },
+      "timeout": 10,
+      "enabled": true
+    },
+    {
+      "name": "mlflow-otel-post-tool-use",
+      "trigger": "PostToolUse",
+      "matcher": ".*",
+      "action": {
+        "type": "command",
+        "command": "python3 -m kiro_mlflow_hook"
+      },
+      "timeout": 10,
+      "enabled": true
+    },
+    {
+      "name": "mlflow-otel-agent-stop",
+      "trigger": "AgentStop",
+      "action": {
+        "type": "command",
+        "command": "python3 -m kiro_mlflow_hook"
+      },
+      "timeout": 10,
+      "enabled": true
+    }
+  ]
+}
