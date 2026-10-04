@@ -1,4 +1,4 @@
-# kiro-mlflow-hook
+# kiro-otel-hook
 
 A [kiro-cli](https://kiro.dev/docs/cli/) hook that pushes agent telemetry
 (session starts, tool calls, agent stops) to OpenTelemetry as traces,
@@ -25,7 +25,7 @@ needs (`.kiro/steering/`) to set itself up for you.
 kiro-cli hook event (stdin JSON)
         │
         ▼
-kiro-mlflow-hook                     # this repo; OpenTelemetry SDK, no MLflow SDK
+kiro-otel-hook                     # this repo; OpenTelemetry SDK, no MLflow SDK
         │
         │  1 span + 1 log record + 1 histogram point per hook firing
         ▼
@@ -61,9 +61,9 @@ signal lands, so you swap backends by editing `docker/otel-collector-config.yaml
   variables become `gitlab.*` attributes: pipeline, job, commit, merge
   request, user, and runner. They are set on the OpenTelemetry *resource*,
   so all three signals carry them, and on the span and log record. Outside
-  CI nothing is added. See `src/kiro_mlflow_hook/ci.py` for the full map.
+  CI nothing is added. See `src/kiro_otel_hook/ci.py` for the full map.
 
-See `.kiro/steering/mlflow-otel-hook.md` for the version of these
+See `.kiro/steering/kiro-otel-hook.md` for the version of these
 instructions written for Kiro itself.
 
 ## Using with MLflow
@@ -116,7 +116,7 @@ turns content capture on. Keep the default on shared machines and CI runners.
 
 ## Setup
 
-Install the package so the `kiro-mlflow-hook` command is on `PATH`, then
+Install the package so the `kiro-otel-hook` command is on `PATH`, then
 register the hook either per repo or for your whole user account.
 
 ```bash
@@ -126,7 +126,7 @@ cp .env.example .env
 source .env
 ```
 
-**Per repo.** The hook file `.kiro/hooks/mlflow-otel-metrics.json` is already
+**Per repo.** The hook file `.kiro/hooks/kiro-otel.json` is already
 active for this repo. kiro-cli picks up `.kiro/hooks/` automatically, with no
 registration step. To add it to another project:
 
@@ -145,7 +145,7 @@ scripts/install.sh --user
 Use one or the other for a given workspace. If both are present, every event
 is recorded twice.
 
-The hook runs `kiro-mlflow-hook` by name, so the Python environment it was
+The hook runs `kiro-otel-hook` by name, so the Python environment it was
 installed into must be on `PATH` when kiro-cli starts.
 
 ### Running it on a GitLab runner
@@ -154,9 +154,9 @@ Bake the hook into the runner image and configure it through job or runner
 variables:
 
 ```dockerfile
-RUN pip install /path/to/kiro-mlflow-hook \
+RUN pip install /path/to/kiro-otel-hook \
  && mkdir -p /root/.kiro/hooks \
- && cp /path/to/kiro-mlflow-hook/.kiro/hooks/mlflow-otel-metrics.json /root/.kiro/hooks/
+ && cp /path/to/kiro-otel-hook/.kiro/hooks/kiro-otel.json /root/.kiro/hooks/
 ```
 
 ```yaml
@@ -189,7 +189,7 @@ hand exactly like kiro-cli would:
 
 ```bash
 echo '{"hook_event_name":"PostToolUse","tool_name":"fs_write","session_id":"demo","cwd":"'"$PWD"'","duration_ms":123}' \
-  | kiro-mlflow-hook
+  | kiro-otel-hook
 ```
 
 It should exit 0 with no output. Telemetry failures are logged to stderr,
@@ -218,19 +218,19 @@ All configuration is environment variables (see `.env.example`):
 |---|---|
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Base OTLP endpoint. Each signal's path (`/v1/traces`, `/v1/metrics`, `/v1/logs`) is appended automatically. Per-signal `OTEL_EXPORTER_OTLP_<SIGNAL>_ENDPOINT` and `_HEADERS` overrides also work. With no endpoint of any kind set, the hook does nothing. |
 | `OTEL_TRACES_EXPORTER`, `OTEL_METRICS_EXPORTER`, `OTEL_LOGS_EXPORTER` | Set to `none` to turn that signal off. |
-| `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` (default) or `grpc`. gRPC needs `pip install "kiro-mlflow-hook[grpc]"`. |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` (default) or `grpc`. gRPC needs `pip install "kiro-otel-hook[grpc]"`. |
 | `OTEL_EXPORTER_OTLP_TIMEOUT` | Export timeout in **seconds**. Defaults to `2` so an unreachable collector can't stall a tool call. |
 | `OTEL_SERVICE_NAME` | `service.name` resource attribute on all signals. |
 | `OTEL_RESOURCE_ATTRIBUTES` | Extra resource attributes, merged as usual. |
 | `KIRO_OTEL_GENAI_DETAIL` | `off`, `metadata` (default), or `full`. See "Data handling". |
-| `KIRO_MLFLOW_EXPERIMENT_NAME` | Human-readable label added as `kiro.experiment`. The actual MLflow experiment traces land in is decided by the collector's `x-mlflow-experiment-id` header; see `docker/otel-collector-config.yaml`. |
-| `KIRO_MLFLOW_HOOK_LOG_LEVEL` | Hook's own stderr log verbosity. |
+| `KIRO_OTEL_EXPERIMENT_NAME` | Human-readable label added as `kiro.experiment`. The actual MLflow experiment traces land in is decided by the collector's `x-mlflow-experiment-id` header; see `docker/otel-collector-config.yaml`. |
+| `KIRO_OTEL_LOG_LEVEL` | Hook's own stderr log verbosity. |
 
 ## Design constraints
 
 - **The hook must always exit 0.** A crashing hook pollutes the kiro-cli
   session and looks like a real error. This is structural: the
-  `kiro-mlflow-hook` command and `python -m kiro_mlflow_hook` both enter
+  `kiro-otel-hook` command and `python -m kiro_otel_hook` both enter
   through `hook.cli()`, which wraps everything and forces exit code 0.
   Each failure stage (bad JSON, unexpected payload shape, unreachable
   collector) is also caught and logged to stderr.

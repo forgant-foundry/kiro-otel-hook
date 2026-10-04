@@ -2,35 +2,35 @@
   "version": "v1",
   "hooks": [
     {
-      "name": "mlflow-otel-session-start",
+      "name": "kiro-otel-session-start",
       "description": "Emit OTLP telemetry when a kiro-cli session starts",
       "trigger": "SessionStart",
       "action": {
         "type": "command",
-        "command": "kiro-mlflow-hook"
+        "command": "kiro-otel-hook"
       },
       "timeout": 10,
       "enabled": true
     },
     {
-      "name": "mlflow-otel-post-tool-use",
+      "name": "kiro-otel-post-tool-use",
       "description": "Emit OTLP telemetry after every tool call",
       "trigger": "PostToolUse",
       "matcher": ".*",
       "action": {
         "type": "command",
-        "command": "kiro-mlflow-hook"
+        "command": "kiro-otel-hook"
       },
       "timeout": 10,
       "enabled": true
     },
     {
-      "name": "mlflow-otel-stop",
+      "name": "kiro-otel-stop",
       "description": "Emit OTLP telemetry when the agent finishes its turn",
       "trigger": "Stop",
       "action": {
         "type": "command",
-        "command": "kiro-mlflow-hook"
+        "command": "kiro-otel-hook"
       },
       "timeout": 10,
       "enabled": true

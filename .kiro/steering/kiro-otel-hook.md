@@ -2,7 +2,7 @@
 inclusion: always
 ---
 
-# kiro-mlflow-hook: what this repo is and how to set it up
+# kiro-otel-hook: what this repo is and how to set it up
 
 This repository is both the source for, and a working example of, a kiro-cli
 hook that pushes agent telemetry (session starts, tool calls, agent stops) to
@@ -20,10 +20,10 @@ engine does not read `.kiro/hooks/*.json`, so the hook never fires there.
 
 ## What's here
 
-- `src/kiro_mlflow_hook/` -- the hook implementation (Python). The console
-  entry point is `kiro_mlflow_hook.hook:cli` (`kiro-mlflow-hook` on PATH, or
-  `python3 -m kiro_mlflow_hook`). `cli()` wraps `main()` and always exits 0.
-- `.kiro/hooks/mlflow-otel-metrics.json` -- registers the hook against the
+- `src/kiro_otel_hook/` -- the hook implementation (Python). The console
+  entry point is `kiro_otel_hook.hook:cli` (`kiro-otel-hook` on PATH, or
+  `python3 -m kiro_otel_hook`). `cli()` wraps `main()` and always exits 0.
+- `.kiro/hooks/kiro-otel.json` -- registers the hook against the
   canonical V3 triggers `SessionStart`, `PostToolUse` (matcher `.*`), and
   `Stop`. Already active in this repo (hooks in `.kiro/hooks/` activate
   automatically, no registration step needed).
@@ -38,7 +38,7 @@ engine does not read `.kiro/hooks/*.json`, so the hook never fires there.
 
 1. Create a venv and install the package in editable mode:
    `python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev,smoke]"`
-   Keep this venv activated when starting kiro-cli so `kiro-mlflow-hook` is
+   Keep this venv activated when starting kiro-cli so `kiro-otel-hook` is
    on PATH.
 2. Copy `.env.example` to `.env` and `source .env` (or otherwise export those
    vars) before running `kiro-cli` in this project, so the hook knows where
@@ -47,7 +47,7 @@ engine does not read `.kiro/hooks/*.json`, so the hook never fires there.
 3. Bring up the validation stack: `docker compose up -d --build`. Wait for
    `docker compose ps` to show `mlflow` healthy.
 4. Confirm the hook runs cleanly on its own before trusting it inside a real
-   session: `echo '{"hook_event_name":"SessionStart","session_id":"smoke","cwd":"'"$PWD"'"}' | kiro-mlflow-hook`
+   session: `echo '{"hook_event_name":"SessionStart","session_id":"smoke","cwd":"'"$PWD"'"}' | kiro-otel-hook`
    It must exit 0 even if it can't reach the collector -- this hook is
    non-blocking by design and must never fail a kiro-cli session.
 5. Validate signals arrived (or just run `scripts/smoke_test.sh`, which

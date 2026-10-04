@@ -2,7 +2,7 @@
 inclusion: manual
 ---
 
-# Installing kiro-mlflow-hook into another project
+# Installing kiro-otel-hook into another project
 
 Referenced on demand as `#install-elsewhere` when a user wants this hook
 running in a repo other than this one, or on every workspace of a machine.
@@ -13,7 +13,7 @@ default 2.x engine does not read `.kiro/hooks/*.json` files at all.
 1. Pick one install mode, never both for the same workspace (both means
    every event is recorded twice):
    - **Per repo:** `scripts/install.sh /path/to/target-repo`. It copies
-     `.kiro/hooks/mlflow-otel-metrics.json` into the target repo's
+     `.kiro/hooks/kiro-otel.json` into the target repo's
      `.kiro/hooks/`, copies `.env.example` into the target repo root (if no
      `.env` exists there), and `pip install -e`'s this package into the
      active Python environment.
@@ -21,7 +21,7 @@ default 2.x engine does not read `.kiro/hooks/*.json` files at all.
      and writes the hook config to `~/.kiro/hooks/`, so it fires in every
      workspace. This is the right choice for CI runner images; see the
      README's "Running it on a GitLab runner" section.
-2. Make sure the `kiro-mlflow-hook` command is on `PATH` when kiro-cli
+2. Make sure the `kiro-otel-hook` command is on `PATH` when kiro-cli
    starts (activate the venv it was installed into). The hook config runs
    it by that name.
 3. Set `OTEL_EXPORTER_OTLP_ENDPOINT` for wherever their collector actually
@@ -33,4 +33,4 @@ default 2.x engine does not read `.kiro/hooks/*.json` files at all.
    this repo's validation stack (`docker compose up -d` here first) to
    confirm the hook fires correctly, then swap to their real endpoint.
 5. Confirm activation the same way as in this repo: pipe a fake JSON
-   payload into `kiro-mlflow-hook` and check it exits 0.
+   payload into `kiro-otel-hook` and check it exits 0.

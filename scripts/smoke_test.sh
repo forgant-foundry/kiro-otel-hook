@@ -41,7 +41,7 @@ curl -sf "$mlflow_url/health" >/dev/null || { echo "mlflow never became healthy"
 
 echo "==> firing a fake PostToolUse hook event (session_id=$marker)"
 echo "{\"hook_event_name\":\"PostToolUse\",\"tool_name\":\"fs_write\",\"session_id\":\"$marker\",\"cwd\":\"$repo_root\",\"duration_ms\":123}" \
-    | python3 -m kiro_mlflow_hook
+    | python3 -m kiro_otel_hook
 
 echo "==> waiting for the collector to forward the trace to mlflow"
 MARKER="$marker" MLFLOW_URL="$mlflow_url" python3 <<'EOF'

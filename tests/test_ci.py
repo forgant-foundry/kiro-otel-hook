@@ -1,4 +1,4 @@
-from kiro_mlflow_hook.ci import ci_attributes
+from kiro_otel_hook.ci import ci_attributes
 
 
 def test_no_attributes_outside_gitlab_ci():

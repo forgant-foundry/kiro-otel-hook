@@ -1,6 +1,6 @@
 import pytest
 
-from kiro_mlflow_hook.config import load_config
+from kiro_otel_hook.config import load_config
 
 
 @pytest.fixture(autouse=True)

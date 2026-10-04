@@ -6,8 +6,8 @@ import sys
 
 import pytest
 
-from kiro_mlflow_hook import hook, telemetry
-from kiro_mlflow_hook.hook import cli, main
+from kiro_otel_hook import hook, telemetry
+from kiro_otel_hook.hook import cli, main
 
 
 def _run_with_stdin(monkeypatch, payload):
@@ -71,7 +71,7 @@ def _run_module(stdin, env_overrides):
     env = {k: v for k, v in os.environ.items() if not k.startswith(("OTEL_", "KIRO_"))}
     env.update(env_overrides)
     return subprocess.run(
-        [sys.executable, "-m", "kiro_mlflow_hook"], input=stdin, env=env, capture_output=True, text=True, timeout=30
+        [sys.executable, "-m", "kiro_otel_hook"], input=stdin, env=env, capture_output=True, text=True, timeout=30
     )
 
 
@@ -83,7 +83,7 @@ def test_module_entry_point_exits_zero_on_garbage():
 def test_disabled_path_never_loads_the_otel_sdk():
     env = {k: v for k, v in os.environ.items() if k != "OTEL_EXPORTER_OTLP_ENDPOINT"}
     code = (
-        "import sys; from kiro_mlflow_hook.hook import main; main(); "
+        "import sys; from kiro_otel_hook.hook import main; main(); "
         "print('opentelemetry.sdk.trace' in sys.modules)"
     )
     result = subprocess.run([sys.executable, "-c", code], input="{}", env=env, capture_output=True, text=True)

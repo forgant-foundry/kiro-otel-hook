@@ -8,9 +8,9 @@ from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 from opentelemetry.sdk.trace.export import SpanExportResult
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from kiro_mlflow_hook import telemetry
-from kiro_mlflow_hook.config import Config
-from kiro_mlflow_hook.payload import parse_hook_event
+from kiro_otel_hook import telemetry
+from kiro_otel_hook.config import Config
+from kiro_otel_hook.payload import parse_hook_event
 
 GITLAB_ENV = {"GITLAB_CI": "true", "CI_PIPELINE_ID": "42", "CI_COMMIT_SHA": "deadbeef", "GITLAB_USER_LOGIN": "dev"}
 

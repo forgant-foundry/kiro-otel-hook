@@ -1,6 +1,6 @@
 """Entry point invoked by kiro-cli as a hook command.
 
-kiro-cli runs this as `kiro-mlflow-hook` (or `python3 -m kiro_mlflow_hook`),
+kiro-cli runs this as `kiro-otel-hook` (or `python3 -m kiro_otel_hook`),
 piping the hook's JSON session context to stdin. The hook is non-blocking,
 but a non-zero exit or stack trace still shows up in the session and can be
 confused for a real error -- so the process always exits 0.
@@ -24,7 +24,7 @@ from .payload import parse_hook_event
 def _configure_logging(level: str) -> None:
     logging.basicConfig(
         level=getattr(logging, level.upper(), logging.INFO),
-        format="kiro-mlflow-hook: %(levelname)s: %(message)s",
+        format="kiro-otel-hook: %(levelname)s: %(message)s",
         stream=sys.stderr,
     )
 

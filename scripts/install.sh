@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the kiro-mlflow-hook package into the active Python environment and
+# Install the kiro-otel-hook package into the active Python environment and
 # register the hook with kiro-cli (3.0+, or 2.13+ launched with --v3).
 #
 #   scripts/install.sh /path/to/target-repo   per-repo: <repo>/.kiro/hooks/
@@ -19,7 +19,7 @@ usage() {
 [ $# -eq 1 ] || usage
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-hook_file="$repo_root/.kiro/hooks/mlflow-otel-metrics.json"
+hook_file="$repo_root/.kiro/hooks/kiro-otel.json"
 
 if [ "$1" = "--user" ]; then
     hooks_dir="$HOME/.kiro/hooks"
@@ -41,11 +41,11 @@ else
 fi
 
 mkdir -p "$hooks_dir"
-cp "$hook_file" "$hooks_dir/mlflow-otel-metrics.json"
-echo "installed hook config at $hooks_dir/mlflow-otel-metrics.json"
-echo "installed kiro-mlflow-hook into the active Python environment ($(command -v python3))"
+cp "$hook_file" "$hooks_dir/kiro-otel.json"
+echo "installed hook config at $hooks_dir/kiro-otel.json"
+echo "installed kiro-otel-hook into the active Python environment ($(command -v python3))"
 
-if ! command -v kiro-mlflow-hook >/dev/null 2>&1; then
-    echo "warning: 'kiro-mlflow-hook' is not on PATH; kiro-cli runs it by that name." >&2
+if ! command -v kiro-otel-hook >/dev/null 2>&1; then
+    echo "warning: 'kiro-otel-hook' is not on PATH; kiro-cli runs it by that name." >&2
     echo "         Activate this Python environment before starting kiro-cli, or add its bin/ to PATH." >&2
 fi

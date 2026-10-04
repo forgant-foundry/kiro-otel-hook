@@ -58,7 +58,7 @@ _logger = logging.getLogger(__name__)
 _FLUSH_TIMEOUT_MS = 3_000
 # The reader only exports on force_flush(); never on a timer.
 _METRIC_EXPORT_INTERVAL_MS = 24 * 60 * 60 * 1000
-_SCOPE = "kiro_mlflow_hook"
+_SCOPE = "kiro_otel_hook"
 
 DURATION_METRIC = "kiro.hook.duration"
 
@@ -115,7 +115,7 @@ def _otlp_exporters(protocol: str) -> Exporters:
         except ImportError:
             _logger.warning(
                 "OTEL_EXPORTER_OTLP_PROTOCOL=grpc but the gRPC exporter isn't installed "
-                "(pip install 'kiro-mlflow-hook[grpc]'); falling back to http/protobuf"
+                "(pip install 'kiro-otel-hook[grpc]'); falling back to http/protobuf"
             )
             return _otlp_exporters("http/protobuf")
     else:

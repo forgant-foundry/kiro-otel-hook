@@ -1,4 +1,4 @@
-from kiro_mlflow_hook.payload import parse_hook_event
+from kiro_otel_hook.payload import parse_hook_event
 
 
 def test_parses_known_fields():

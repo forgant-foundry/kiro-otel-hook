@@ -1,5 +1,5 @@
 [project]
-name = "kiro-mlflow-hook"
+name = "kiro-otel-hook"
 version = "0.2.0"
 description = "Kiro CLI hook that pushes agent telemetry (traces, metrics, logs) to OpenTelemetry, MLflow-compatible"
 readme = "README.md"
@@ -25,7 +25,7 @@ dev = [
 ]
 
 [project.scripts]
-kiro-mlflow-hook = "kiro_mlflow_hook.hook:cli"
+kiro-otel-hook = "kiro_otel_hook.hook:cli"
 
 [build-system]
 requires = ["setuptools>=68"]
