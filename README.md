@@ -45,9 +45,10 @@ signal lands, so you swap backends by editing `docker/otel-collector-config.yaml
 
 - **Traces**: one span per hook firing, named after the hook event, with
   `kiro.*` attributes (event name, session id, cwd, tool name, reported
-  duration). At the default detail level the span also carries the
-  `mlflow.spanType` and `gen_ai.*` attributes that make MLflow and other
-  GenAI-aware UIs render it as a tool call.
+  duration) and the standard `session.id` and, in CI, `user.id`. At the
+  default detail level the span also carries `mlflow.*` and `gen_ai.*`
+  attributes that make MLflow and other GenAI-aware UIs render it as a tool
+  call. See "Using with MLflow".
 - **Metrics**: a `kiro.hook.duration` histogram (milliseconds), labeled only
   with `span.type`, `span.status`, and `kiro.experiment`. Its `_count`
   series is the number of hook firings. Per-event labels like tool name stay
@@ -64,6 +65,37 @@ signal lands, so you swap backends by editing `docker/otel-collector-config.yaml
 
 See `.kiro/steering/mlflow-otel-hook.md` for the version of these
 instructions written for Kiro itself.
+
+## Using with MLflow
+
+No MLflow library is needed. MLflow's OTLP ingestion reads these attributes
+from the hook's spans:
+
+| Span attribute | Becomes in MLflow |
+|---|---|
+| `session.id` (the kiro session id) | The trace's session, so a kiro session's traces group together in the Sessions view |
+| `user.id` (`GITLAB_USER_LOGIN` in GitLab CI) | The trace's user |
+| `mlflow.traceTag.<key>` | Searchable trace tags: `kiro.hook_event_name`, `kiro.tool_name`, `kiro.experiment`, and every `gitlab.*` attribute |
+| `mlflow.spanType`, `mlflow.spanInputs`, `mlflow.spanOutputs` | Span type and, at `full` detail only, inputs and outputs |
+
+The `mlflow.*` attributes are omitted at `KIRO_OTEL_GENAI_DETAIL=off`.
+
+**Through a collector** (recommended when you also want metrics and logs):
+point the collector's trace exporter at MLflow's `/v1/traces` with an
+`x-mlflow-experiment-id` header, as `docker/otel-collector-config.yaml` does.
+
+**Straight to MLflow, no collector.** MLflow accepts traces only, so turn the
+other two signals off with the standard OpenTelemetry switches:
+
+```bash
+export OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://localhost:5001/v1/traces
+export OTEL_EXPORTER_OTLP_TRACES_HEADERS=x-mlflow-experiment-id=0
+export OTEL_METRICS_EXPORTER=none
+export OTEL_LOGS_EXPORTER=none
+```
+
+The MLflow server's `--allowed-hosts` must include the host and port you
+use in that URL.
 
 ## Data handling
 
@@ -184,7 +216,8 @@ All configuration is environment variables (see `.env.example`):
 
 | Variable | Purpose |
 |---|---|
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | Base OTLP endpoint. Each signal's path (`/v1/traces`, `/v1/metrics`, `/v1/logs`) is appended automatically. Unset disables the hook entirely. Per-signal `OTEL_EXPORTER_OTLP_<SIGNAL>_ENDPOINT` overrides also work. |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Base OTLP endpoint. Each signal's path (`/v1/traces`, `/v1/metrics`, `/v1/logs`) is appended automatically. Per-signal `OTEL_EXPORTER_OTLP_<SIGNAL>_ENDPOINT` and `_HEADERS` overrides also work. With no endpoint of any kind set, the hook does nothing. |
+| `OTEL_TRACES_EXPORTER`, `OTEL_METRICS_EXPORTER`, `OTEL_LOGS_EXPORTER` | Set to `none` to turn that signal off. |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` (default) or `grpc`. gRPC needs `pip install "kiro-mlflow-hook[grpc]"`. |
 | `OTEL_EXPORTER_OTLP_TIMEOUT` | Export timeout in **seconds**. Defaults to `2` so an unreachable collector can't stall a tool call. |
 | `OTEL_SERVICE_NAME` | `service.name` resource attribute on all signals. |

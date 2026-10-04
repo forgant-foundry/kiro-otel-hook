@@ -12,10 +12,10 @@ from kiro_mlflow_hook import telemetry
 from kiro_mlflow_hook.config import Config
 from kiro_mlflow_hook.payload import parse_hook_event
 
-GITLAB_ENV = {"GITLAB_CI": "true", "CI_PIPELINE_ID": "42", "CI_COMMIT_SHA": "deadbeef"}
+GITLAB_ENV = {"GITLAB_CI": "true", "CI_PIPELINE_ID": "42", "CI_COMMIT_SHA": "deadbeef", "GITLAB_USER_LOGIN": "dev"}
 
 
-def _config(detail="metadata"):
+def _config(detail="metadata", **overrides):
     return Config(
         otlp_endpoint="http://unused",
         otlp_protocol="http/protobuf",
@@ -23,6 +23,7 @@ def _config(detail="metadata"):
         experiment_name="exp",
         log_level="INFO",
         genai_detail=detail,
+        **overrides,
     )
 
 
@@ -39,7 +40,7 @@ def _event():
     )
 
 
-def _run(detail, monkeypatch, span_exporter=None):
+def _run(detail, monkeypatch, span_exporter=None, **config_overrides):
     for key in list(GITLAB_ENV) + ["CI_JOB_ID"]:
         monkeypatch.delenv(key, raising=False)
     for key, value in GITLAB_ENV.items():
@@ -56,7 +57,7 @@ def _run(detail, monkeypatch, span_exporter=None):
         return original_shutdown(*args, **kwargs)
 
     metrics.shutdown = _capture_then_shutdown
-    telemetry.emit(_event(), _config(detail), telemetry.Exporters(span=spans, metric_reader=metrics, log=logs))
+    telemetry.emit(_event(), _config(detail, **config_overrides), telemetry.Exporters(span=spans, metric_reader=metrics, log=logs))
     return spans, collected.get("data"), logs
 
 
@@ -142,3 +143,40 @@ def test_otlp_exporters_build_for_each_protocol(protocol):
     exporters = telemetry._otlp_exporters(protocol)
     assert exporters.span is not None and exporters.log is not None
     exporters.metric_reader.shutdown()
+
+
+def test_mlflow_recognized_identifiers_and_trace_tags(monkeypatch):
+    spans, _, logs = _run("metadata", monkeypatch)
+    (span,) = spans.get_finished_spans()
+    attrs = span.attributes
+    # Semantic-convention ids MLflow maps to the trace's session and user.
+    assert attrs["session.id"] == "s1"
+    assert attrs["user.id"] == "dev"
+    # Root-span attributes MLflow turns into trace tags.
+    assert attrs["mlflow.traceTag.kiro.tool_name"] == "fs_write"
+    assert attrs["mlflow.traceTag.kiro.hook_event_name"] == "PostToolUse"
+    assert attrs["mlflow.traceTag.gitlab.pipeline.id"] == "42"
+    (record,) = logs.get_finished_logs()
+    log_attrs = _log_record(record).attributes
+    assert log_attrs["session.id"] == "s1"
+    assert not any(k.startswith("mlflow.traceTag.") for k in log_attrs)
+
+
+def test_off_level_keeps_identifiers_but_no_trace_tags(monkeypatch):
+    spans, _, _ = _run("off", monkeypatch)
+    (span,) = spans.get_finished_spans()
+    assert span.attributes["session.id"] == "s1"
+    assert not any(k.startswith("mlflow.") for k in span.attributes)
+
+
+def test_signals_can_be_disabled(monkeypatch):
+    spans, metric_data, logs = _run(
+        "metadata", monkeypatch, metrics_enabled=False, logs_enabled=False
+    )
+    assert len(spans.get_finished_spans()) == 1
+    assert logs.get_finished_logs() == ()
+    assert metric_data is None or not metric_data.resource_metrics
+
+    spans, metric_data, logs = _run("metadata", monkeypatch, traces_enabled=False)
+    assert spans.get_finished_spans() == ()
+    assert len(logs.get_finished_logs()) == 1

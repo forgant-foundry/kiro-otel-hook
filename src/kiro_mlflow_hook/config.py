@@ -29,9 +29,17 @@ class Config:
     # Set when KIRO_OTEL_GENAI_DETAIL held something unrecognized, so the
     # caller can warn once logging is configured.
     genai_detail_invalid: str | None = None
+    # Standard OTEL_{TRACES,METRICS,LOGS}_EXPORTER=none turns a signal off,
+    # e.g. when exporting traces straight to an MLflow server, which accepts
+    # traces only.
+    traces_enabled: bool = True
+    metrics_enabled: bool = True
+    logs_enabled: bool = True
 
     @property
     def otel_enabled(self) -> bool:
+        # otlp_endpoint is the base endpoint or, failing that, the first
+        # per-signal one, so traces-only setups (e.g. straight to MLflow) work.
         return bool(self.otlp_endpoint)
 
     @property
@@ -51,6 +59,18 @@ def _parse_genai_detail(raw: str | None) -> tuple[str, str | None]:
     return DEFAULT_GENAI_DETAIL, raw
 
 
+_ENDPOINT_VARS = (
+    "OTEL_EXPORTER_OTLP_ENDPOINT",
+    "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
+    "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
+    "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT",
+)
+
+
+def _signal_enabled(env_var: str) -> bool:
+    return os.environ.get(env_var, "otlp").strip().lower() != "none"
+
+
 def load_config() -> Config:
     # The OTLP exporters' default timeout (10s, per the OTel spec -- note the
     # env var's value is in *seconds* despite the lack of a "_MS" suffix)
@@ -63,11 +83,17 @@ def load_config() -> Config:
     genai_detail, genai_detail_invalid = _parse_genai_detail(os.environ.get("KIRO_OTEL_GENAI_DETAIL"))
 
     return Config(
-        otlp_endpoint=os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"),
+        otlp_endpoint=next(
+            (os.environ[v] for v in _ENDPOINT_VARS if os.environ.get(v)),
+            None,
+        ),
         otlp_protocol=os.environ.get("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf"),
         service_name=os.environ.get("OTEL_SERVICE_NAME", "kiro-cli"),
         experiment_name=os.environ.get("KIRO_MLFLOW_EXPERIMENT_NAME", "kiro-cli"),
         log_level=os.environ.get("KIRO_MLFLOW_HOOK_LOG_LEVEL", "INFO"),
         genai_detail=genai_detail,
         genai_detail_invalid=genai_detail_invalid,
+        traces_enabled=_signal_enabled("OTEL_TRACES_EXPORTER"),
+        metrics_enabled=_signal_enabled("OTEL_METRICS_EXPORTER"),
+        logs_enabled=_signal_enabled("OTEL_LOGS_EXPORTER"),
     )

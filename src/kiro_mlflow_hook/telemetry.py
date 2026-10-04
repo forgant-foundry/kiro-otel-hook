@@ -62,6 +62,11 @@ _SCOPE = "kiro_mlflow_hook"
 
 DURATION_METRIC = "kiro.hook.duration"
 
+# Attributes mirrored as `mlflow.traceTag.<key>`, which MLflow's OTLP
+# ingestion turns into searchable trace tags. Plus every gitlab.* attribute.
+_TRACE_TAG_KEYS = ("kiro.hook_event_name", "kiro.tool_name", "kiro.experiment")
+_TRACE_TAG_PREFIX = "mlflow.traceTag."
+
 AttrValue = str | bool | int | float
 
 
@@ -165,6 +170,14 @@ def build_attributes(
         attrs["kiro.reported_duration_ms"] = event.duration_ms
     attrs.update(ci_attrs)
 
+    # OpenTelemetry semantic-convention identifiers. MLflow's OTLP ingestion
+    # also maps these onto the trace: session.id groups traces in its
+    # Sessions view, and user.id sets the trace's user.
+    if event.session_id:
+        attrs["session.id"] = event.session_id
+    if user := ci_attrs.get("gitlab.user.login"):
+        attrs["user.id"] = user
+
     if config.genai_detail == GENAI_DETAIL_OFF:
         return attrs
 
@@ -174,6 +187,9 @@ def build_attributes(
     if event.tool_name:
         attrs["gen_ai.operation.name"] = "execute_tool"
         attrs["gen_ai.tool.name"] = event.tool_name
+    for key in (*_TRACE_TAG_KEYS, *ci_attrs):
+        if key in attrs:
+            attrs[_TRACE_TAG_PREFIX + key] = str(attrs[key])
 
     if config.capture_content:
         # kiro.raw.* can carry prompt text, tool input/output, file contents,
@@ -201,13 +217,19 @@ def emit(event: HookEvent, config: Config, exporters: Exporters | None = None) -
     # shutdown_on_exit=False: providers are shut down explicitly below. The
     # default atexit hook would otherwise re-export metrics at interpreter
     # teardown -- a second, unbounded-by-us network call per hook firing.
+    # A signal set to `none` via the standard OTEL_<SIGNAL>_EXPORTER env var
+    # gets a provider with nothing attached, so it records but never exports.
     tracer_provider = TracerProvider(resource=resource, shutdown_on_exit=False)
-    tracer_provider.add_span_processor(SimpleSpanProcessor(span_exporter))
+    if config.traces_enabled:
+        tracer_provider.add_span_processor(SimpleSpanProcessor(span_exporter))
     meter_provider = MeterProvider(
-        resource=resource, metric_readers=[exporters.metric_reader], shutdown_on_exit=False
+        resource=resource,
+        metric_readers=[exporters.metric_reader] if config.metrics_enabled else [],
+        shutdown_on_exit=False,
     )
     logger_provider = LoggerProvider(resource=resource, shutdown_on_exit=False)
-    logger_provider.add_log_record_processor(SimpleLogRecordProcessor(exporters.log))
+    if config.logs_enabled:
+        logger_provider.add_log_record_processor(SimpleLogRecordProcessor(exporters.log))
 
     try:
         duration = meter_provider.get_meter(_SCOPE).create_histogram(
@@ -239,7 +261,8 @@ def emit(event: HookEvent, config: Config, exporters: Exporters | None = None) -
             _logger.warning("Span export failed; skipping metric and log export (collector unreachable?)")
             return
 
-        _emit_log_record(logger_provider, event, attrs, span_context)
+        if config.logs_enabled:
+            _emit_log_record(logger_provider, event, attrs, span_context)
         _bounded("meter provider", lambda: meter_provider.force_flush(timeout_millis=_FLUSH_TIMEOUT_MS))
         _bounded("tracer provider", lambda: tracer_provider.force_flush(timeout_millis=_FLUSH_TIMEOUT_MS))
         _bounded("logger provider", lambda: logger_provider.force_flush(timeout_millis=_FLUSH_TIMEOUT_MS))
@@ -272,7 +295,8 @@ def _emit_log_record(
                 severity_number=SeverityNumber.INFO,
                 severity_text="INFO",
                 body=_log_body(event),
-                attributes=dict(attrs),
+                # Trace tags are an MLflow trace concept; don't repeat them on logs.
+                attributes={k: v for k, v in attrs.items() if not k.startswith(_TRACE_TAG_PREFIX)},
             )
         )
     except Exception:

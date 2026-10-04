@@ -88,6 +88,10 @@ steering for details on demand.
   the no-endpoint path never loads the OTel SDK.
 - `mlflow.*` span attributes are sent as plain values (not JSON-encoded):
   MLflow's OTLP ingestion JSON-encodes every attribute it receives.
+- MLflow support stays attribute-based, with no MLflow library: `session.id`
+  and `user.id` (semantic conventions MLflow maps to the trace's session and
+  user) and `mlflow.traceTag.<key>` root-span attributes (become trace
+  tags). For collector-less MLflow export, see README "Using with MLflow".
 - The dockerized MLflow server's `--allowed-hosts` must include both the
   collector's in-network hostname (`mlflow:5000`) and whatever host:port a
   browser/client uses from outside the compose network (`localhost:5001`
