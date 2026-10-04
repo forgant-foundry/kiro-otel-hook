@@ -23,6 +23,8 @@ services:
     depends_on:
       mlflow:
         condition: service_healthy
+      loki:
+        condition: service_started
 
   prometheus:
     image: prom/prometheus:v2.55.1
@@ -32,6 +34,12 @@ services:
       - "9090:9090"
     depends_on:
       - otel-collector
+
+  loki:
+    image: grafana/loki:3.3.2
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    ports:
+      - "3100:3100"
 
 volumes:
   mlflow-data:

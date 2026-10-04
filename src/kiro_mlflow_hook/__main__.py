@@ -1,4 +1,4 @@
-from .hook import main
+from .hook import cli
 
 if __name__ == "__main__":
-    main()
+    cli()

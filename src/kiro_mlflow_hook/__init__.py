@@ -1,5 +1,5 @@
-"""Kiro CLI hook that pushes agent metrics to OpenTelemetry via MLflow tracing."""
+"""Kiro CLI hook that pushes agent telemetry (traces, metrics, logs) to OpenTelemetry."""
 
-__all__ = ["main"]
+__all__ = ["cli", "main"]
 
-from .hook import main
+from .hook import cli, main

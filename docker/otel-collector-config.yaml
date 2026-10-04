@@ -10,6 +10,8 @@ processors:
   batch: {}
 
 exporters:
+  # The hook is backend-agnostic: it sends plain OTLP here, and this file alone
+  # decides where each signal lands. Swap or add exporters to change backends.
   # otlphttp appends the signal-specific path (/v1/traces) to this base URL,
   # which matches the path MLflow's ingestion endpoint expects.
   otlphttp/mlflow:
@@ -20,6 +22,11 @@ exporters:
       insecure: true
   prometheus:
     endpoint: 0.0.0.0:8889
+  # Loki 3.x ingests OTLP natively; otlphttp appends /v1/logs to this base.
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
   debug:
     verbosity: basic
 
@@ -33,3 +40,7 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [prometheus, debug]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp/loki, debug]

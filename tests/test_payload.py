@@ -20,14 +20,14 @@ def test_parses_known_fields():
 
 
 def test_accepts_tool_alias_and_elapsed_ms():
-    event = parse_hook_event({"hook_event": "AgentStop", "tool": "shell", "elapsed_ms": "10"})
-    assert event.event_name == "AgentStop"
+    event = parse_hook_event({"hook_event": "Stop", "tool": "shell", "elapsed_ms": "10"})
+    assert event.event_name == "Stop"
     assert event.tool_name == "shell"
     assert event.duration_ms == 10.0
 
 
 def test_unknown_fields_become_generic_attributes():
-    event = parse_hook_event({"hook_event_name": "AgentSpawn", "custom_field": {"nested": 1}})
+    event = parse_hook_event({"hook_event_name": "SessionStart", "custom_field": {"nested": 1}})
     assert event.attributes["kiro.raw.custom_field"] == "{'nested': 1}"
 
 
@@ -39,7 +39,7 @@ def test_missing_event_name_falls_back_to_unknown():
 
 
 def test_long_attribute_values_are_truncated():
-    event = parse_hook_event({"hook_event_name": "AgentSpawn", "blob": "x" * 1000})
+    event = parse_hook_event({"hook_event_name": "SessionStart", "blob": "x" * 1000})
     value = event.attributes["kiro.raw.blob"]
     assert len(value) == 512
     assert value.endswith("...")

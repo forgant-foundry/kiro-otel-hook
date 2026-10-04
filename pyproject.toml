@@ -1,22 +1,31 @@
 [project]
 name = "kiro-mlflow-hook"
-version = "0.1.0"
-description = "Kiro CLI hook that pushes agent metrics to OpenTelemetry via MLflow tracing"
+version = "0.2.0"
+description = "Kiro CLI hook that pushes agent telemetry (traces, metrics, logs) to OpenTelemetry, MLflow-compatible"
 readme = "README.md"
 requires-python = ">=3.10"
+# No MLflow dependency: the hook drives the OpenTelemetry SDK directly and
+# MLflow is just one possible trace sink behind the collector. The OTel logs
+# SDK is still under `_logs`, so stay below the next major version.
 dependencies = [
-    "mlflow>=3.6.0",
-    "opentelemetry-sdk>=1.27.0",
-    "opentelemetry-exporter-otlp-proto-http>=1.27.0",
+    "opentelemetry-sdk>=1.39.0,<2",
+    "opentelemetry-exporter-otlp-proto-http>=1.39.0,<2",
 ]
 
 [project.optional-dependencies]
+grpc = [
+    "opentelemetry-exporter-otlp-proto-grpc>=1.39.0,<2",
+]
+# Only scripts/smoke_test.sh needs MLflow, to query traces back out.
+smoke = [
+    "mlflow>=3.6.0",
+]
 dev = [
     "pytest>=8.0.0",
 ]
 
 [project.scripts]
-kiro-mlflow-hook = "kiro_mlflow_hook.hook:main"
+kiro-mlflow-hook = "kiro_mlflow_hook.hook:cli"
 
 [build-system]
 requires = ["setuptools>=68"]
